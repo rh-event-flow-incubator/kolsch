@@ -34,8 +34,8 @@ public class ZKConsumerWrapper implements Runnable {
     @Override
     public void run() {
 
-        CuratorFramework client = null;
-        PathChildrenCache cache = null;
+        CuratorFramework client;
+        PathChildrenCache cache;
 
         try {
             //Zookeeper setup using Curator
@@ -108,41 +108,36 @@ public class ZKConsumerWrapper implements Runnable {
      */
     private void addListener(PathChildrenCache cache) {
 
-        // a PathChildrenCacheListener is optional. Here, it's used just to log changes
-        PathChildrenCacheListener listener = new PathChildrenCacheListener() {
+        PathChildrenCacheListener listener = (client, event) -> {
 
-            @Override
-            public void childEvent(CuratorFramework client, PathChildrenCacheEvent event) throws Exception {
+            switch (event.getType()) {
+                case CHILD_ADDED: {
 
-                switch (event.getType()) {
-                    case CHILD_ADDED: {
+                    logger.fine("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
-                        logger.fine("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
-
-                        //Connect
-                        if(event.getData().getPath().equals(path + node)){
-                            startConsumer(new String(event.getData().getData()));
-                        }
-                        break;
+                    //Connect
+                    if(event.getData().getPath().equals(path + node)){
+                        startConsumer(new String(event.getData().getData()));
                     }
+                    break;
+                }
 
-                    case CHILD_UPDATED: {
-                        logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath())  + ". New value: " + new String(event.getData().getData()));
+                case CHILD_UPDATED: {
+                    logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath())  + ". New value: " + new String(event.getData().getData()));
 
-                        //Reconnect
-                        if(event.getData().getPath().equals(path  + node)){
-                          startConsumer(new String(event.getData().getData()));
-                        }
-                        break;
+                    //Reconnect
+                    if(event.getData().getPath().equals(path  + node)){
+                      startConsumer(new String(event.getData().getData()));
                     }
+                    break;
+                }
 
-                    case CHILD_REMOVED: {
-                        logger.fine("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                case CHILD_REMOVED: {
+                    logger.fine("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
-                        //Disconnect
-                        stopConsumer();
-                        break;
-                    }
+                    //Disconnect
+                    stopConsumer();
+                    break;
                 }
             }
         };
