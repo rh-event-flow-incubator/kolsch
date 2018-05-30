@@ -1,4 +1,4 @@
-package com.redhat.streaming.zk.demo;
+package com.redhat.streaming.zk.messaging;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -13,24 +13,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class SimpleConsumer implements Runnable {
+public class SimpleConsumer extends AbstractProcessor implements Runnable {
 
+    private static final Logger logger = Logger.getLogger(SimpleConsumer.class.getName());
 
     private final AtomicBoolean running = new AtomicBoolean(Boolean.TRUE);
-    private static final Logger logger = Logger.getLogger(SimpleConsumer.class.getName());
-    private final KafkaConsumer<String, String> consumer;
-    private String topic;
+    private KafkaConsumer<String, String> consumer;
 
-    public SimpleConsumer(String kafkaUrl, String consumerGroupId, String topic) {
+    public SimpleConsumer() {
+    }
+
+    public void init(String kafkaUrl, String consumerGroupId, String topic) {
+        super.init(topic);
 
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaUrl);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        consumer = new KafkaConsumer(props);
 
-        this.topic = topic;
+        consumer = new KafkaConsumer<>(props);
     }
 
     @Override
@@ -68,7 +70,7 @@ public class SimpleConsumer implements Runnable {
     /**
      * True when a consumer is running; otherwise false
      */
-    public boolean isRunning() {
+    private boolean isRunning() {
         return running.get();
     }
 
@@ -76,8 +78,10 @@ public class SimpleConsumer implements Runnable {
      * Shutdown hook which can be called from a separate thread.
      */
     public void shutdown() {
-        logger.info("Shutting down the consumer.");
-        running.set(Boolean.FALSE);
-        consumer.wakeup();
+        if (isRunning()) {
+            logger.info("Shutting down the consumer.");
+            running.set(Boolean.FALSE);
+            consumer.wakeup();
+        }
     }
 }

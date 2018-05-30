@@ -62,7 +62,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.redhat.streaming.zk.demo.ZKConsumerWrapper</mainClass>
+                                    <mainClass>com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>
@@ -95,7 +95,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.redhat.streaming.zk.demo.ZKConsumerWrapper</mainClass>
+                    <mainClass>com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper</mainClass>
                 </configuration>
             </plugin>
 
