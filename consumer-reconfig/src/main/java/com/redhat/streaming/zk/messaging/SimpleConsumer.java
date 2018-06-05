@@ -18,6 +18,7 @@ public class SimpleConsumer extends AbstractProcessor implements Runnable {
     private static final Logger logger = Logger.getLogger(SimpleConsumer.class.getName());
 
     private final AtomicBoolean running = new AtomicBoolean(Boolean.TRUE);
+
     private KafkaConsumer<String, String> consumer;
 
     public SimpleConsumer() {

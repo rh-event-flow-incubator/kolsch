@@ -19,18 +19,15 @@ public class Demo {
 
     private static final String zkUrl = "localhost:2181";
     private static final String path = "/streams/app1";
-    private static final String prodNode = "/prod";
-    private static final String consNode = "/cons";
 
     private static final String kafkaUrl = "localhost:9092";
-    private static final String consumerGroupId = "group1";
 
     public static void main(String... args) {
 
         logger.info("Starting Demo");
-        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final ExecutorService executor = Executors.newFixedThreadPool(3);
 
-        ZKSingleTopicWrapper zkProducer= new ZKSingleTopicWrapper(zkUrl, path, prodNode, new SimpleProducer(), kafkaUrl, "group1");
+        ZKSingleTopicWrapper zkProducer= new ZKSingleTopicWrapper(zkUrl, path, "/prod", new SimpleProducer(), kafkaUrl, "group1");
         executor.submit(zkProducer);
 
         List<String> nodes = Arrays.asList("/procIn", "/procOut");
@@ -38,7 +35,7 @@ public class Demo {
         executor.submit(zkProcessor);
 
 
-        ZKSingleTopicWrapper zkConsumer = new ZKSingleTopicWrapper(zkUrl, path, consNode, new SimpleConsumer(), kafkaUrl, "group3");
+        ZKSingleTopicWrapper zkConsumer = new ZKSingleTopicWrapper(zkUrl, path, "/cons", new SimpleConsumer(), kafkaUrl, "group3");
         executor.submit(zkConsumer);
 
 
