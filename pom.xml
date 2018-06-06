@@ -15,9 +15,20 @@
     <packaging>pom</packaging>
 
    <modules>
-       <module>consumer-reconfig</module>
+       <module>zkWrapper</module>
+       <module>producer</module>
+       <!--<module>processor</module>-->
+       <module>consumer</module>
+       <!--<module>demo</module>-->
    </modules>
 
+
+    <properties>
+        <version.kafka.clients>1.0.0</version.kafka.clients>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
 
 
 
