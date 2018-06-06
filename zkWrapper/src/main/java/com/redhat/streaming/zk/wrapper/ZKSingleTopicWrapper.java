@@ -4,6 +4,7 @@ import com.redhat.streaming.zk.messaging.AbstractProcessor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.utils.ZKPaths;
@@ -45,7 +46,6 @@ public class ZKSingleTopicWrapper implements Runnable {
         PathChildrenCache cache;
 
         try {
-
             //Zookeeper setup using Curator
             client = CuratorFrameworkFactory.newClient(zkUrl, new ExponentialBackoffRetry(1000, 3));
             client.start();
@@ -125,17 +125,7 @@ public class ZKSingleTopicWrapper implements Runnable {
                     logger.info("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Connect
-                    if (event.getData().getPath().equals(path + topicNode)) {
-                        kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
-                        if (kafkaConfig.isValid(false)) {
-                            startProcessor(kafkaConfig);
-                        }
-                    } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
-                        kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
-                        if (kafkaConfig.isValid(false)) {
-                            startProcessor(kafkaConfig);
-                        }
-                    }
+                    connect(event);
                     break;
                 }
 
@@ -143,17 +133,7 @@ public class ZKSingleTopicWrapper implements Runnable {
                     logger.info("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
 
                     //Reconnect
-                    if (event.getData().getPath().equals(path + topicNode)) {
-                        kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
-                        if (kafkaConfig.isValid(false)) {
-                            startProcessor(kafkaConfig);
-                        }
-                    } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
-                        kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
-                        if (kafkaConfig.isValid(false)) {
-                            startProcessor(kafkaConfig);
-                        }
-                    }
+                    connect(event);
                     break;
                 }
 
@@ -167,6 +147,20 @@ public class ZKSingleTopicWrapper implements Runnable {
             }
         };
         cache.getListenable().addListener(listener);
+    }
+
+    private void connect(PathChildrenCacheEvent event) {
+        if (event.getData().getPath().equals(path + topicNode)) {
+            kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
+            if (kafkaConfig.isValid(false)) {
+                startProcessor(kafkaConfig);
+            }
+        } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
+            kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
+            if (kafkaConfig.isValid(false)) {
+                startProcessor(kafkaConfig);
+            }
+        }
     }
 
 
