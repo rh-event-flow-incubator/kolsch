@@ -27,15 +27,15 @@ public class Demo {
         logger.info("Starting Demo");
         final ExecutorService executor = Executors.newFixedThreadPool(3);
 
-        ZKSingleTopicWrapper zkProducer= new ZKSingleTopicWrapper(zkUrl, path, "/prod", new SimpleProducer(), kafkaUrl, "group1");
+        ZKSingleTopicWrapper zkProducer= new ZKSingleTopicWrapper(zkUrl, path,  new SimpleProducer());
         executor.submit(zkProducer);
 
-        List<String> nodes = Arrays.asList("/procIn", "/procOut");
-        ZKMultiTopicWrapper zkProcessor = new ZKMultiTopicWrapper(zkUrl, path, nodes, new SimpleProcessor(), kafkaUrl, "group2");
-        executor.submit(zkProcessor);
+//        List<String> nodes = Arrays.asList("/procIn", "/procOut");
+//        ZKMultiTopicWrapper zkProcessor = new ZKMultiTopicWrapper(zkUrl, path, nodes, new SimpleProcessor(), kafkaUrl, "group2");
+//        executor.submit(zkProcessor);
 
 
-        ZKSingleTopicWrapper zkConsumer = new ZKSingleTopicWrapper(zkUrl, path, "/cons", new SimpleConsumer(), kafkaUrl, "group3");
+        ZKSingleTopicWrapper zkConsumer = new ZKSingleTopicWrapper(zkUrl, path, new SimpleConsumer());
         executor.submit(zkConsumer);
 
 

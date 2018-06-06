@@ -3,15 +3,11 @@ package com.redhat.streaming.zk.wrapper;
 import com.redhat.streaming.zk.messaging.AbstractProcessor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.utils.ZKPaths;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -20,34 +16,26 @@ import java.util.logging.Logger;
 /**
  *
  */
-public class ZKMultiTopicWrapper implements Runnable {
+public class ZKSingleTopicWrapper implements Runnable {
 
-    private static final Logger logger = Logger.getLogger(ZKMultiTopicWrapper.class.getName());
+    private static final Logger logger = Logger.getLogger(ZKSingleTopicWrapper.class.getName());
 
     //ZK Setup
     private String zkUrl;
     private String path;
-    private List<String> nodes;
-    private Map<String, String> nodeTopicMapping = new HashMap<>();
+    private String topicNode = "/topic";
+    private String kafkaUrlNode = "/kafkaUrl";
 
-    //Kafka Setup
-    private AbstractProcessor processor;
-    private String kafkaUrl;
-    private String consumerGroupId;
+    private KafkaConfig kafkaConfig;
 
     //Handle on the thread we start
+    private AbstractProcessor processor;
     private Future f = null;
 
-    public ZKMultiTopicWrapper(String zkUrl, String path, List<String> nodes, AbstractProcessor processor, String kafkaUrl, String consumerGroupId) {
+    public ZKSingleTopicWrapper(String zkUrl, String path, AbstractProcessor processor) {
         this.zkUrl = zkUrl;
         this.path = path;
-        this.nodes = nodes;
         this.processor = processor;
-        this.kafkaUrl = kafkaUrl;
-        this.consumerGroupId = consumerGroupId;
-        for (String node : nodes) {
-            nodeTopicMapping.put(path + node, null);
-        }
     }
 
     @Override
@@ -57,6 +45,7 @@ public class ZKMultiTopicWrapper implements Runnable {
         PathChildrenCache cache;
 
         try {
+
             //Zookeeper setup using Curator
             client = CuratorFrameworkFactory.newClient(zkUrl, new ExponentialBackoffRetry(1000, 3));
             client.start();
@@ -68,16 +57,11 @@ public class ZKMultiTopicWrapper implements Runnable {
             addListener(cache);
 
             //Initial stream setup if the node exists in ZK
-            for (String nodePlusPath : nodeTopicMapping.keySet()) {
+            kafkaConfig = new KafkaConfig(cache.getCurrentData(path + kafkaUrlNode), cache.getCurrentData(path + topicNode));
 
-                ChildData data = cache.getCurrentData(nodePlusPath);
-                if (data != null) {
-                    nodeTopicMapping.put(nodePlusPath, new String(data.getData()));
-                }
-            }
-
-            if (!nodeTopicMapping.containsValue(null)) {
-                startProcessor();
+            //Connect if topic not null, ie. node exists
+            if (kafkaConfig.isValid(false)) {
+                startProcessor(kafkaConfig);
             } else {
                 logger.info("Not connected to topic");
             }
@@ -87,8 +71,11 @@ public class ZKMultiTopicWrapper implements Runnable {
         }
     }
 
-
-    private void startProcessor() {
+    /**
+     * Connect a thread which will consume a topic to the named topic. Will disconnect the existing thread if
+     * it exists before connecting to a new one
+     */
+    private void startProcessor(KafkaConfig config) {
 
         try {
 
@@ -103,14 +90,10 @@ public class ZKMultiTopicWrapper implements Runnable {
             Class clazz = Class.forName(clazzName);
             processor = (AbstractProcessor) clazz.newInstance();
 
-            processor.init(kafkaUrl, consumerGroupId, path, nodes, nodeTopicMapping);
+            processor.init(config.getKafkaUrl(), config.getConsumerGroupId(), config.getKafkaTopic());
             f = executor.submit(processor);
 
-            StringBuilder nodeList = new StringBuilder();
-            for (String node : nodes) {
-                nodeList.append(nodeTopicMapping.get(path + node)).append(", ");
-            }
-            logger.info("Started thread to connect to Topics: " + nodeList.substring(0, nodeList.length() - 2));
+            logger.info("Started thread to connect to Topic: " + config.getKafkaTopic() + ". Obtained from ZK: " + path + topicNode);
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             e.printStackTrace();
         }
@@ -124,7 +107,6 @@ public class ZKMultiTopicWrapper implements Runnable {
         if (f != null) {
             logger.info("Consumer disconnecting");
             processor.shutdown();
-            //todo: check that the consumer thread dies
         }
     }
 
@@ -140,42 +122,44 @@ public class ZKMultiTopicWrapper implements Runnable {
             switch (event.getType()) {
                 case CHILD_ADDED: {
 
-                    logger.fine("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                    logger.info("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Connect
-                    String path = event.getData().getPath();
-                    if (nodeTopicMapping.keySet().contains(path)) {
-                        nodeTopicMapping.put(path, new String(event.getData().getData()));
-                        if (!nodeTopicMapping.values().contains(null)) {
-                            startProcessor();
+                    if (event.getData().getPath().equals(path + topicNode)) {
+                        kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
+                        if (kafkaConfig.isValid(false)) {
+                            startProcessor(kafkaConfig);
+                        }
+                    } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
+                        kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
+                        if (kafkaConfig.isValid(false)) {
+                            startProcessor(kafkaConfig);
                         }
                     }
                     break;
                 }
 
                 case CHILD_UPDATED: {
-                    logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
+                    logger.info("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
 
                     //Reconnect
-                    String path = event.getData().getPath();
-                    if (nodeTopicMapping.keySet().contains(path)) {
-                        nodeTopicMapping.put(path, new String(event.getData().getData()));
-                        if (!nodeTopicMapping.values().contains(null)) {
-                            startProcessor();
+                    if (event.getData().getPath().equals(path + topicNode)) {
+                        kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
+                        if (kafkaConfig.isValid(false)) {
+                            startProcessor(kafkaConfig);
+                        }
+                    } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
+                        kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
+                        if (kafkaConfig.isValid(false)) {
+                            startProcessor(kafkaConfig);
                         }
                     }
                     break;
                 }
 
                 case CHILD_REMOVED: {
-                    logger.fine("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                    logger.info("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
-                    String path = event.getData().getPath();
-                    if (nodeTopicMapping.keySet().contains(path)) {
-                        nodeTopicMapping.put(path, new String(event.getData().getData()));
-
-                        stopProcessor();
-                    }
                     //Disconnect
                     stopProcessor();
                     break;

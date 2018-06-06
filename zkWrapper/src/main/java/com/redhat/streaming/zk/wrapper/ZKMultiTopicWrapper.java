@@ -3,26 +3,32 @@ package com.redhat.streaming.zk.wrapper;
 import com.redhat.streaming.zk.messaging.AbstractProcessor;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.framework.recipes.cache.*;
+import org.apache.curator.framework.recipes.cache.ChildData;
+import org.apache.curator.framework.recipes.cache.PathChildrenCache;
+import org.apache.curator.framework.recipes.cache.PathChildrenCacheListener;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.utils.ZKPaths;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 /**
- * 
+ * todo: Update to take the URL of the Kafka server
  */
-public class ZKSingleTopicWrapper implements Runnable {
+public class ZKMultiTopicWrapper implements Runnable {
 
-    private static final Logger logger = Logger.getLogger(ZKSingleTopicWrapper.class.getName());
+    private static final Logger logger = Logger.getLogger(ZKMultiTopicWrapper.class.getName());
 
     //ZK Setup
     private String zkUrl;
     private String path;
-    private String node;
+    private List<String> nodes;
+    private Map<String, String> nodeTopicMapping = new HashMap<>();
 
     //Kafka Setup
     private AbstractProcessor processor;
@@ -32,13 +38,16 @@ public class ZKSingleTopicWrapper implements Runnable {
     //Handle on the thread we start
     private Future f = null;
 
-    public ZKSingleTopicWrapper(String zkUrl, String path, String node, AbstractProcessor processor, String kafkaUrl, String consumerGroupId) {
+    public ZKMultiTopicWrapper(String zkUrl, String path, List<String> nodes, AbstractProcessor processor, String kafkaUrl, String consumerGroupId) {
         this.zkUrl = zkUrl;
         this.path = path;
-        this.node = node;
+        this.nodes = nodes;
         this.processor = processor;
         this.kafkaUrl = kafkaUrl;
         this.consumerGroupId = consumerGroupId;
+        for (String node : nodes) {
+            nodeTopicMapping.put(path + node, null);
+        }
     }
 
     @Override
@@ -59,12 +68,17 @@ public class ZKSingleTopicWrapper implements Runnable {
             addListener(cache);
 
             //Initial stream setup if the node exists in ZK
-            ChildData data = cache.getCurrentData(path + node);
+            for (String nodePlusPath : nodeTopicMapping.keySet()) {
 
-            //Connect if topic not null, ie. node exists
-            if(data != null){
-                startProcessor(new String(data.getData()));
-            }else{
+                ChildData data = cache.getCurrentData(nodePlusPath);
+                if (data != null) {
+                    nodeTopicMapping.put(nodePlusPath, new String(data.getData()));
+                }
+            }
+
+            if (!nodeTopicMapping.containsValue(null)) {
+                startProcessor();
+            } else {
                 logger.info("Not connected to topic");
             }
 
@@ -73,12 +87,8 @@ public class ZKSingleTopicWrapper implements Runnable {
         }
     }
 
-    /**
-     * Connect a thread which will consume a topic to the named topic. Will disconnect the existing thread if
-     * it exists before connecting to a new one
-     * @param topic name of the new topic to connect to
-     */
-    private void startProcessor(String topic){
+
+    private void startProcessor() {
 
         try {
 
@@ -93,10 +103,14 @@ public class ZKSingleTopicWrapper implements Runnable {
             Class clazz = Class.forName(clazzName);
             processor = (AbstractProcessor) clazz.newInstance();
 
-            processor.init(kafkaUrl, consumerGroupId, topic);
+            processor.init(kafkaUrl, consumerGroupId, path, nodes, nodeTopicMapping);
             f = executor.submit(processor);
 
-            logger.info("Started thread to connect to Topic: " + topic + ". Obtained from ZK: " + path + node);
+            StringBuilder nodeList = new StringBuilder();
+            for (String node : nodes) {
+                nodeList.append(nodeTopicMapping.get(path + node)).append(", ");
+            }
+            logger.info("Started thread to connect to Topics: " + nodeList.substring(0, nodeList.length() - 2));
         } catch (ClassNotFoundException | IllegalAccessException | InstantiationException e) {
             e.printStackTrace();
         }
@@ -105,17 +119,18 @@ public class ZKSingleTopicWrapper implements Runnable {
     /**
      * Terminate the thread
      */
-    private void stopProcessor(){
+    private void stopProcessor() {
 
-            if (f != null) {
-                logger.info("Consumer disconnecting");
-                processor.shutdown();
-                //todo: check that the consumer thread dies
+        if (f != null) {
+            logger.info("Consumer disconnecting");
+            processor.shutdown();
+            //todo: check that the consumer thread dies
         }
     }
 
     /**
      * Add a listener to get updates from the cache for the given children of the path.
+     *
      * @param cache Cache to get notifications from
      */
     private void addListener(PathChildrenCache cache) {
@@ -128,18 +143,26 @@ public class ZKSingleTopicWrapper implements Runnable {
                     logger.fine("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Connect
-                    if(event.getData().getPath().equals(path + node)){
-                        startProcessor(new String(event.getData().getData()));
+                    String path = event.getData().getPath();
+                    if (nodeTopicMapping.keySet().contains(path)) {
+                        nodeTopicMapping.put(path, new String(event.getData().getData()));
+                        if (!nodeTopicMapping.values().contains(null)) {
+                            startProcessor();
+                        }
                     }
                     break;
                 }
 
                 case CHILD_UPDATED: {
-                    logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath())  + ". New value: " + new String(event.getData().getData()));
+                    logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
 
                     //Reconnect
-                    if(event.getData().getPath().equals(path  + node)){
-                        startProcessor(new String(event.getData().getData()));
+                    String path = event.getData().getPath();
+                    if (nodeTopicMapping.keySet().contains(path)) {
+                        nodeTopicMapping.put(path, new String(event.getData().getData()));
+                        if (!nodeTopicMapping.values().contains(null)) {
+                            startProcessor();
+                        }
                     }
                     break;
                 }
@@ -147,6 +170,12 @@ public class ZKSingleTopicWrapper implements Runnable {
                 case CHILD_REMOVED: {
                     logger.fine("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
+                    String path = event.getData().getPath();
+                    if (nodeTopicMapping.keySet().contains(path)) {
+                        nodeTopicMapping.put(path, new String(event.getData().getData()));
+
+                        stopProcessor();
+                    }
                     //Disconnect
                     stopProcessor();
                     break;

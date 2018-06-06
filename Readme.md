@@ -1,61 +1,71 @@
 # Project Kolsch
 
 This example will show how we can deploy a set of microservices and then reconfigure them on the fly using Apache Zookeeper.
+The microservices are implemented as Fat Jars which run a 'Wrapper' class to do the configuration of the actual producer / consumer.
+
+The intention is that the services can be deployed first and will wait for the conifuguration to appear later.
+The services are configured with environment variables which specify the connection to Zookeeper and a path to watch.
+When the path that is being watched has certain children (`kafkaUrl` and `topic`) the service thread will be started.
+If the values of these znodes change the wrapper is notified using Apache Curator framework. 
+This results in the service thread being terminated and another one started with updated paramters.
+
+At the moment only the Kafka connection settings and topic to communicate with can be specified. 
+A later version will allow other parameters to be specified such as Serdes.
+
+# Modules
+
+* zkWrapper - implementation of a single and multi-topic wrapper. Multi-topic wrapper is intended for Kafka Streams API but needs updating.
+* Producer - simple producer that will send and receive messages.
+* Consumer - consumes messages and logs them.
+* Processor - Uses KStreams API to split messages into one word per message. Needs updating after Multi-topic wrapper is updated.
+* Demo - Version of the demo that does not require Openshift. Start standalone Zookeeper and Kafka first.
 
 # Running the demo
 
-Start external servers. Tested with
+Deploy [Strimzi](http://strimzi.io/) into Openshift.
 
-* Kafka v2.11-1.1.0
-* Zookeeper v3.4.10
-
-I've just used the basic config from the Kafka Quickstart run both servers. They will be run on Openshift in the future.
-
-Start the consumer with `mvn clean package exec:java`. 
-Initially this will try to read the name of the topic to connect to from ZK://streams/app1/s1.
-This node will not exist in ZK so the client will not connect to a topic.
-
-Run the Zookeeper CLI (I don't think this comes bundled with Kafka so you'll need a separate download).
-
-Create the nodes in Zookeeper to the names of the topics in Kafka. 
+Deploy the microservices to Openshift `mvn clean package fabric8:deploy` from the producer and consumer directories.
+Once deployed you should see the following log messages in the pod log indicating the service has started but is awaiting configuration.
 
 ```bash
-simon@MacBookPro:zookeeper-3.4.10 $ ./bin/zkCli.sh
-Connecting to localhost:2181
-
-...
-
-[zk: localhost:2181(CONNECTED) 1] create /streams/app1/s1 test
-Created /streams/app1/s1
-
+Jun 06, 2018 10:15:43 AM com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper run
+INFO: Not connected to topic
 ```
-
-You can send messages from the Kafka CLI to the `test` topic and these should be received by the consumer.
-You should also see some logging on the consumer about which topic it is connected to (or not).
-You can change the topic that the consumer is connected to by changing the value of the node
+The demo uses the Zookeeper instance that is used internally by Strimzi (my-cluster-zookeeper) but a separate one could be provisioned.
+Use the online terminal of the Zookeeper pod to issue the following commands:
 
 ```bash
-[zk: localhost:2181(CONNECTED) 4] set /streams/app1/s1 test2
+> cd bin
+
+# Start the consumer
+> ./zookeeper-shell.sh localhost:2181 <<< "create /streams/consumer/kafkaUrl my-cluster-kafka:9092"
+> ./zookeeper-shell.sh localhost:2181 <<< "create /streams/consumer/topic topic1"
+
+# Start the producer
+>./zookeeper-shell.sh localhost:2181 <<< "create /streams/producer/kafkaUrl my-cluster-kafka:9092"
+> ./zookeeper-shell.sh localhost:2181 <<< "create /streams/producer/topic topic1"
+
 ```
+If you now look at the console of the producer and consumer you will see messages being sent and received. 
+To reconfigure the 'wiring' change the values of the znodes for the topics. 
+For instance `> ./zookeeper-shell.sh localhost:2181 <<< "set /streams/consumer/topic topic2"` will restart the consumer listening to `topic2`.
+Similar commands can be applied to the producer in order to wire it back up again.
 
-You can delete the ZK node which will stop the consumer from receiving any messages.
+When the processor service is updated it will be possible to dynamically insert this into the pipeline by changing the topics that the consumer is listening to.
 
-```bash
-[zk: localhost:2181(CONNECTED) 4] delete /streams/app1/s1 
-```
+# Lifecycle
 
-
+The implementation that uses fat jars deployed into Openshift. 
+This means that the wrapper can control the lifecycle of the thread doing the work and restart it when the znodes have changed.
+This technique will not work with Thorntail but it is possible that the classes could be hot swapped when a change is detected using [Hotswap Agent](http://hotswapagent.org/). 
 
 # To Do
 
-* Add lifecycle diagrams
-* Producer and consumer APIs
-* Test application to show reconfiguration
-* How do the ZK keys that the application is using get wired up?
-* How to inject into client code?
-* How to deal with KStreams API?
-* Openshiftify the demo
-
-Using a `PathChildrenCache` as might in future be interested in multiple streams which could be represented as children of a common path.’
+* Add diagrams
+* Update ZKMultiTopicWrapper
+* Fix KStreams service
+* Inject wrapper into client code. Currently the developer has to manually setup the wrapper. It should be injected.
+* The wiring that is done using the Zookeeper shell should be done via Config Maps. 
+  An operator component will be developed which will watch for Config Map updates and apply the changes to Zookeeper. 
 
 

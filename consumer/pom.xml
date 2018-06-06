@@ -18,7 +18,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!--TODO: Cleanup pom.xml -->
     <parent>
         <groupId>com.redhat.streaming</groupId>
         <artifactId>kolsch</artifactId>
@@ -26,18 +25,9 @@
     </parent>
 
     <groupId>com.redhat.streaming.zk</groupId>
-    <artifactId>reconfig-demo</artifactId>
+    <artifactId>reconfigConsumer</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
-
-
-    <licenses>
-        <license>
-            <name>The Apache Software License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
-            <distribution>repo</distribution>
-        </license>
-    </licenses>
 
     <build>
         <plugins>
@@ -62,7 +52,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper</mainClass>
+                                    <mainClass>com.redhat.streaming.zk.messaging.Runner</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>
@@ -95,7 +85,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper</mainClass>
+                    <mainClass>com.redhat.streaming.zk.messaging.Runner</mainClass>
                 </configuration>
             </plugin>
 
@@ -153,9 +143,8 @@
                                     </service>
                                 </labels>
                                 <env>
-                                    <!--<KAFKA_SERVICE_HOST>localhost</KAFKA_SERVICE_HOST>-->
-                                    <!--<KAFKA_SERVICE_PORT>9092</KAFKA_SERVICE_PORT>-->
-                                    <!--<KAFKA_TOPIC_SUCCESS>test</KAFKA_TOPIC_SUCCESS>-->
+                                    <ZK_URL>my-cluster-zookeeper:2181</ZK_URL>
+                                    <ZK_PATH>/streams/consumer</ZK_PATH>
                                 </env>
                             </resources>
                         </configuration>
@@ -175,96 +164,12 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
-            <version>${version.kafka.clients}</version>
+            <groupId>com.redhat.streaming.zk</groupId>
+            <artifactId>zkWrapper</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
-
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <scope>test</scope>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>2.8.47</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
-            <version>3.6.1</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka_${version.kafka.scala}</artifactId>
-            <version>${version.kafka.clients}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-core</artifactId>
-            <version>${version.debezium}</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.debezium</groupId>
-            <artifactId>debezium-core</artifactId>
-            <version>${version.debezium}</version>
-            <type>test-jar</type>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.curator</groupId>
-            <artifactId>curator-recipes</artifactId>
-            <version>2.12.0</version>
-        </dependency>
-
 
     </dependencies>
 
-    <repositories>
-        <repository>
-            <id>snapshots-oss.sonatype.org</id>
-            <name>Sonatype Snapshots Repository</name>
-            <url>http://oss.sonatype.org/content/repositories/snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-
-    <properties>
-        <version.kafka.clients>1.0.0</version.kafka.clients>
-        <version.kafka.scala>2.11</version.kafka.scala>
-        <version.debezium>0.7.1</version.debezium>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
 </project>

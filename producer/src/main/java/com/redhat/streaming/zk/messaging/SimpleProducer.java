@@ -17,6 +17,7 @@ public class SimpleProducer extends AbstractProcessor implements Runnable {
     private static final Logger logger = Logger.getLogger(SimpleProducer.class.getName());
 
     private final AtomicBoolean running = new AtomicBoolean(Boolean.TRUE);
+
     private KafkaProducer<String, String> producer;
 
     public SimpleProducer() {
@@ -68,7 +69,7 @@ public class SimpleProducer extends AbstractProcessor implements Runnable {
      */
     public void shutdown() {
         if (isRunning()) {
-            logger.info("Shutting down the consumer.");
+            logger.info("Shutting down the Producer.");
             running.set(Boolean.FALSE);
         }
     }
