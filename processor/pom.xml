@@ -18,7 +18,6 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!--TODO: Cleanup pom.xml -->
     <parent>
         <groupId>com.redhat.streaming</groupId>
         <artifactId>kolsch</artifactId>
@@ -53,7 +52,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper</mainClass>
+                                    <mainClass>com.redhat.streaming.zk.messaging.Runner</mainClass>
                                 </transformer>
                             </transformers>
                             <filters>
@@ -86,7 +85,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper</mainClass>
+                    <mainClass>com.redhat.streaming.zk.messaging.Runner</mainClass>
                 </configuration>
             </plugin>
 
@@ -144,9 +143,8 @@
                                     </service>
                                 </labels>
                                 <env>
-                                    <!--<KAFKA_SERVICE_HOST>localhost</KAFKA_SERVICE_HOST>-->
-                                    <!--<KAFKA_SERVICE_PORT>9092</KAFKA_SERVICE_PORT>-->
-                                    <!--<KAFKA_TOPIC_SUCCESS>test</KAFKA_TOPIC_SUCCESS>-->
+                                    <ZK_URL>my-cluster-zookeeper:2181</ZK_URL>
+                                    <ZK_PATH>/streams/processor</ZK_PATH>
                                 </env>
                             </resources>
                         </configuration>

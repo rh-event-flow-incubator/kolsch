@@ -60,7 +60,7 @@ public class ZKSingleTopicWrapper implements Runnable {
             kafkaConfig = new KafkaConfig(cache.getCurrentData(path + kafkaUrlNode), cache.getCurrentData(path + topicNode));
 
             //Connect if topic not null, ie. node exists
-            if (kafkaConfig.isValid(false)) {
+            if (kafkaConfig.isValid()) {
                 startProcessor(kafkaConfig);
             } else {
                 logger.info("Not connected to topic");
@@ -90,7 +90,7 @@ public class ZKSingleTopicWrapper implements Runnable {
             Class clazz = Class.forName(clazzName);
             processor = (AbstractProcessor) clazz.newInstance();
 
-            processor.init(config.getKafkaUrl(), config.getConsumerGroupId(), config.getKafkaTopic());
+            processor.init(config.getKafkaUrl(), config.getKafkaTopic());
             f = executor.submit(processor);
 
             logger.info("Started thread to connect to Topic: " + config.getKafkaTopic() + ". Obtained from ZK: " + path + topicNode);
@@ -122,7 +122,7 @@ public class ZKSingleTopicWrapper implements Runnable {
             switch (event.getType()) {
                 case CHILD_ADDED: {
 
-                    logger.info("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                    logger.fine("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Connect
                     connect(event);
@@ -130,7 +130,7 @@ public class ZKSingleTopicWrapper implements Runnable {
                 }
 
                 case CHILD_UPDATED: {
-                    logger.info("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
+                    logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
 
                     //Reconnect
                     connect(event);
@@ -138,7 +138,7 @@ public class ZKSingleTopicWrapper implements Runnable {
                 }
 
                 case CHILD_REMOVED: {
-                    logger.info("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                    logger.fine("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Disconnect
                     stopProcessor();
@@ -150,18 +150,28 @@ public class ZKSingleTopicWrapper implements Runnable {
     }
 
     private void connect(PathChildrenCacheEvent event) {
+
+        String newValue = new String(event.getData().getData());
         if (event.getData().getPath().equals(path + topicNode)) {
-            kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
-            if (kafkaConfig.isValid(false)) {
-                startProcessor(kafkaConfig);
+
+            if (!newValue.equals(kafkaConfig.getKafkaTopic())) {
+                kafkaConfig.setKafkaTopic(newValue);
+                if (kafkaConfig.isValid()) {
+                    logger.info("Restarting because of change to Topic mapping");
+                    startProcessor(kafkaConfig);
+                }
             }
         } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
-            kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
-            if (kafkaConfig.isValid(false)) {
-                startProcessor(kafkaConfig);
+            if (!newValue.equals(kafkaConfig.getKafkaUrl())) {
+                {
+                    logger.info("Restarting because of change to Kafka URL mapping");
+                    kafkaConfig.setKafkaUrl(newValue);
+                    if (kafkaConfig.isValid()) {
+                        startProcessor(kafkaConfig);
+                    }
+                }
             }
         }
     }
-
 
 }

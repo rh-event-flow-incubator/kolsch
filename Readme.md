@@ -14,17 +14,18 @@ A later version will allow other parameters to be specified such as Serdes.
 
 # Modules
 
-* zkWrapper - implementation of a single and multi-topic wrapper. Multi-topic wrapper is intended for Kafka Streams API but needs updating.
+* zkWrapper - implementation of a single and multi-topic wrapper. 
+  Multi-topic wrapper is used for Kafka Streams or other applications that need to communicate with more than one stream.
 * Producer - simple producer that will send and receive messages.
 * Consumer - consumes messages and logs them.
-* Processor - Uses KStreams API to split messages into one word per message. Needs updating after Multi-topic wrapper is updated.
-* Demo - Version of the demo that does not require Openshift. Start standalone Zookeeper and Kafka first.
+* Processor - Uses KStreams API to split messages into one word per message. 
+* Demo - Versions of the demo. One for Openshift and one standalone that requires Zookeeper and Kafka to be running locally.
 
-# Running the demo
+# Running the Example
 
 Deploy [Strimzi](http://strimzi.io/) into Openshift.
 
-Deploy the microservices to Openshift `mvn clean package fabric8:deploy` from the producer and consumer directories.
+Deploy the microservices to Openshift `mvn clean package fabric8:deploy` from the producer, processor and consumer directories.
 Once deployed you should see the following log messages in the pod log indicating the service has started but is awaiting configuration.
 
 ```bash
@@ -32,6 +33,18 @@ Jun 06, 2018 10:15:43 AM com.redhat.streaming.zk.wrapper.ZKSingleTopicWrapper ru
 INFO: Not connected to topic
 ```
 The demo uses the Zookeeper instance that is used internally by Strimzi (my-cluster-zookeeper) but a separate one could be provisioned.
+This will be changed in future as the security around Zookeeper indicates it would be better limited to a single application. 
+There are two ways to wire up the example: the easy way and the hard way.
+
+## The Easy Way
+
+The demo project is setup to wire the three microservices Producer -> Processor -> Consumer. 
+Deploy this project into Openshift and the services will reconifugure themselves and start working.
+If you change the names of the topics that are specified the wiring of the application will change.
+
+
+## The Hard Way
+ 
 Use the online terminal of the Zookeeper pod to issue the following commands:
 
 ```bash
@@ -50,8 +63,6 @@ If you now look at the console of the producer and consumer you will see message
 To reconfigure the 'wiring' change the values of the znodes for the topics. 
 For instance `> ./zookeeper-shell.sh localhost:2181 <<< "set /streams/consumer/topic topic2"` will restart the consumer listening to `topic2`.
 Similar commands can be applied to the producer in order to wire it back up again.
-
-When the processor service is updated it will be possible to dynamically insert this into the pipeline by changing the topics that the consumer is listening to.
 
 # Lifecycle
 

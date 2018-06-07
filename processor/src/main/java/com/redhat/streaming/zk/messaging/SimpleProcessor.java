@@ -1,9 +1,6 @@
 package com.redhat.streaming.zk.messaging;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
@@ -30,14 +27,12 @@ public class SimpleProcessor extends AbstractProcessor implements Runnable {
     public SimpleProcessor() {
     }
 
-    public void init(String kafkaUrl, String consumerGroupId, String path, List<String> nodes, Map<String, String> nodeTopicMapping) {
+    public void init(String kafkaUrl, List<String> topics) {
 
-        for(String node : nodes){
-            topics.add(nodeTopicMapping.get(path + node));
-        }
+        this.topics = topics;
 
         props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, consumerGroupId);
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, UUID.randomUUID().toString());
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaUrl);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
@@ -47,7 +42,7 @@ public class SimpleProcessor extends AbstractProcessor implements Runnable {
     @Override
     public void run() {
 
-        if(topics.size() != 2){
+        if (topics.size() != 2) {
             System.exit(1);
         }
         final StreamsBuilder builder = new StreamsBuilder();
@@ -81,10 +76,10 @@ public class SimpleProcessor extends AbstractProcessor implements Runnable {
     public void shutdown() {
         if (isRunning()) {
             logger.info("Shutting down the processor.");
-            if(streams != null){
+            if (streams != null) {
                 streams.close();
             }
-            if(latch != null){
+            if (latch != null) {
                 latch.countDown();
             }
 

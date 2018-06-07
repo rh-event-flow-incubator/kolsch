@@ -25,8 +25,8 @@ public class Runner {
         final String zkPath = resolve(zkPathVar);
 
         final ExecutorService executor = Executors.newSingleThreadExecutor();
-        List<String> nodes = Arrays.asList("/procIn", "/procOut");
-        ZKMultiTopicWrapper zkProcessor = new ZKMultiTopicWrapper(zkUrl, zkPath, nodes, new SimpleProcessor(), "", "group2");
+        List<String> nodes = Arrays.asList("/in", "/out");
+        ZKMultiTopicWrapper zkProcessor = new ZKMultiTopicWrapper(zkUrl, zkPath, nodes, new SimpleProcessor()); //, "", "group2");
         executor.submit(zkProcessor);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
