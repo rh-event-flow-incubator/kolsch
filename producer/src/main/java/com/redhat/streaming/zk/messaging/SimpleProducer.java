@@ -1,10 +1,8 @@
 package com.redhat.streaming.zk.messaging;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Properties;
@@ -13,8 +11,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Logger;
 
 public class SimpleProducer extends AbstractProcessor implements Runnable {
-
     private static final Logger logger = Logger.getLogger(SimpleProducer.class.getName());
+
+    private String topic;
 
     private final AtomicBoolean running = new AtomicBoolean(Boolean.TRUE);
 
@@ -23,8 +22,8 @@ public class SimpleProducer extends AbstractProcessor implements Runnable {
     public SimpleProducer() {
     }
 
-    public void init(String kafkaUrl, String consumerGroupId, String topic) {
-        super.init(topic);
+    public void init(String kafkaUrl, String topic) {
+        this.topic = topic;
 
         final Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaUrl);

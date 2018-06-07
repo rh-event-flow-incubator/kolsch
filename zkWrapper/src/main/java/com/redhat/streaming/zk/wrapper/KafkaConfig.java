@@ -10,8 +10,6 @@ public class KafkaConfig {
 
     private String kafkaTopic;
 
-    private String consumerGroupId = UUID.randomUUID().toString();
-
     public KafkaConfig() {
     }
 
@@ -41,18 +39,9 @@ public class KafkaConfig {
         this.kafkaTopic = kafkaTopic;
     }
 
-    public String getConsumerGroupId() {
-        return consumerGroupId;
-    }
-
-    public void setConsumerGroupId(String consumerGroupId) {
-        this.consumerGroupId = consumerGroupId;
-    }
-
-    public boolean isValid(boolean checkConsumerGroupId){
+    public boolean isValid(){
         if(kafkaUrl == null || kafkaUrl.equals("")) return false;
         if(kafkaTopic == null || kafkaTopic.equals("")) return false;
-        if(checkConsumerGroupId && (consumerGroupId == null || consumerGroupId.equals(""))) return false;
         return true;
     }
 
@@ -61,7 +50,6 @@ public class KafkaConfig {
         return "KafkaConfig{" +
                 "kafkaUrl='" + kafkaUrl + '\'' +
                 ", kafkaTopic='" + kafkaTopic + '\'' +
-                ", consumerGroupId='" + consumerGroupId + '\'' +
                 '}';
     }
 }

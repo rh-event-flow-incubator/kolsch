@@ -17,9 +17,9 @@
    <modules>
        <module>zkWrapper</module>
        <module>producer</module>
-       <!--<module>processor</module>-->
+       <module>processor</module>
        <module>consumer</module>
-       <!--<module>demo</module>-->
+       <module>demo</module>
    </modules>
 
 

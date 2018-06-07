@@ -60,7 +60,7 @@ public class ZKSingleTopicWrapper implements Runnable {
             kafkaConfig = new KafkaConfig(cache.getCurrentData(path + kafkaUrlNode), cache.getCurrentData(path + topicNode));
 
             //Connect if topic not null, ie. node exists
-            if (kafkaConfig.isValid(false)) {
+            if (kafkaConfig.isValid()) {
                 startProcessor(kafkaConfig);
             } else {
                 logger.info("Not connected to topic");
@@ -90,7 +90,7 @@ public class ZKSingleTopicWrapper implements Runnable {
             Class clazz = Class.forName(clazzName);
             processor = (AbstractProcessor) clazz.newInstance();
 
-            processor.init(config.getKafkaUrl(), config.getConsumerGroupId(), config.getKafkaTopic());
+            processor.init(config.getKafkaUrl(), config.getKafkaTopic());
             f = executor.submit(processor);
 
             logger.info("Started thread to connect to Topic: " + config.getKafkaTopic() + ". Obtained from ZK: " + path + topicNode);
@@ -152,12 +152,12 @@ public class ZKSingleTopicWrapper implements Runnable {
     private void connect(PathChildrenCacheEvent event) {
         if (event.getData().getPath().equals(path + topicNode)) {
             kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
-            if (kafkaConfig.isValid(false)) {
+            if (kafkaConfig.isValid()) {
                 startProcessor(kafkaConfig);
             }
         } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
             kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
-            if (kafkaConfig.isValid(false)) {
+            if (kafkaConfig.isValid()) {
                 startProcessor(kafkaConfig);
             }
         }

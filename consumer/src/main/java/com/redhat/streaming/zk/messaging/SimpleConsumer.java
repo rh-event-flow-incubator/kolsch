@@ -9,11 +9,14 @@ import org.apache.kafka.common.serialization.StringDeserializer;
 
 import java.util.Collections;
 import java.util.Properties;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class SimpleConsumer extends AbstractProcessor implements Runnable {
+
+    private String topic;
 
     private static final Logger logger = Logger.getLogger(SimpleConsumer.class.getName());
 
@@ -24,12 +27,12 @@ public class SimpleConsumer extends AbstractProcessor implements Runnable {
     public SimpleConsumer() {
     }
 
-    public void init(String kafkaUrl, String consumerGroupId, String topic) {
-        super.init(topic);
+    public void init(String kafkaUrl, String topic) {
+        this.topic = topic;
 
         final Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaUrl);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroupId);
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, UUID.randomUUID().toString());
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
 
