@@ -42,7 +42,6 @@ The demo project is setup to wire the three microservices Producer -> Processor 
 Deploy this project into Openshift and the services will reconifugure themselves and start working.
 If you change the names of the topics that are specified the wiring of the application will change.
 
-If you change the  
 
 ## The Hard Way
  

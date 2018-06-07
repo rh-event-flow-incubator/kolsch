@@ -122,7 +122,7 @@ public class ZKSingleTopicWrapper implements Runnable {
             switch (event.getType()) {
                 case CHILD_ADDED: {
 
-                    logger.info("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                    logger.fine("Node added: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Connect
                     connect(event);
@@ -130,7 +130,7 @@ public class ZKSingleTopicWrapper implements Runnable {
                 }
 
                 case CHILD_UPDATED: {
-                    logger.info("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
+                    logger.fine("Node changed: " + ZKPaths.getNodeFromPath(event.getData().getPath()) + ". New value: " + new String(event.getData().getData()));
 
                     //Reconnect
                     connect(event);
@@ -138,7 +138,7 @@ public class ZKSingleTopicWrapper implements Runnable {
                 }
 
                 case CHILD_REMOVED: {
-                    logger.info("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
+                    logger.fine("Node removed: " + ZKPaths.getNodeFromPath(event.getData().getPath()));
 
                     //Disconnect
                     stopProcessor();
@@ -150,18 +150,28 @@ public class ZKSingleTopicWrapper implements Runnable {
     }
 
     private void connect(PathChildrenCacheEvent event) {
+
+        String newValue = new String(event.getData().getData());
         if (event.getData().getPath().equals(path + topicNode)) {
-            kafkaConfig.setKafkaTopic(new String(event.getData().getData()));
-            if (kafkaConfig.isValid()) {
-                startProcessor(kafkaConfig);
+
+            if (!newValue.equals(kafkaConfig.getKafkaTopic())) {
+                kafkaConfig.setKafkaTopic(newValue);
+                if (kafkaConfig.isValid()) {
+                    logger.info("Restarting because of change to Topic mapping");
+                    startProcessor(kafkaConfig);
+                }
             }
         } else if (event.getData().getPath().equals(path + kafkaUrlNode)) {
-            kafkaConfig.setKafkaUrl(new String(event.getData().getData()));
-            if (kafkaConfig.isValid()) {
-                startProcessor(kafkaConfig);
+            if (!newValue.equals(kafkaConfig.getKafkaUrl())) {
+                {
+                    logger.info("Restarting because of change to Kafka URL mapping");
+                    kafkaConfig.setKafkaUrl(newValue);
+                    if (kafkaConfig.isValid()) {
+                        startProcessor(kafkaConfig);
+                    }
+                }
             }
         }
     }
-
 
 }

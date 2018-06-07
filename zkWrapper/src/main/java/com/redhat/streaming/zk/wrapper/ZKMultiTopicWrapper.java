@@ -203,19 +203,27 @@ public class ZKMultiTopicWrapper implements Runnable {
 
     private void connect(TreeCacheEvent event) {
         String path = event.getData().getPath();
+
         if (nodeMapping.keySet().contains(path)) {
 
+            boolean changed =  false;
+            String newValue = new String(event.getData().getData());
 
             if (path.endsWith("kafkaUrl")) {
-                nodeMapping.get(path).setKafkaUrl(new String(event.getData().getData()));
+                if(!nodeMapping.get(path).getKafkaUrl().equals(newValue))
+                {
+                    changed = true;
+                    nodeMapping.get(path).setKafkaUrl(newValue);
+                }
             } else if (path.endsWith("topic")) {
-                nodeMapping.get(path).setKafkaTopic(new String(event.getData().getData()));
-            } else {
-                logger.warning("Unexpected znode: " + path);
-                return;
+                if(!nodeMapping.get(path).getKafkaTopic().equals(newValue))
+                {
+                    changed = true;
+                    nodeMapping.get(path).setKafkaTopic(newValue);
+                }
             }
 
-            if (isValidConfig()) {
+            if (changed && isValidConfig()) {
                 startProcessor();
             } else {
                 logger.info("Not connected to topic");

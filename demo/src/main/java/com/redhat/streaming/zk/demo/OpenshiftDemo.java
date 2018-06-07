@@ -43,7 +43,7 @@ public class OpenshiftDemo {
             client.setData().forPath(path + "/consumer/kafkaUrl", "my-cluster-kafka:9092".getBytes());
 
             client.createContainers(path + "/consumer/topic");
-            client.setData().forPath(path + "/consumer/topic", "topic3".getBytes());
+            client.setData().forPath(path + "/consumer/topic", "topic2".getBytes());
 
             client.close();
 
