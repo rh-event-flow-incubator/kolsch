@@ -73,6 +73,7 @@ This technique will not work with Thorntail but it is possible that the classes 
 # To Do
 
 * Add diagrams
+* Add support for Thorntail and other RHOARs.
 * Inject wrapper into client code. Currently the developer has to manually setup the wrapper. It should be injected.
 * The wiring that is done using the Zookeeper shell should be done via Config Maps. 
   An operator component will be developed which will watch for Config Map updates and apply the changes to Zookeeper. 
