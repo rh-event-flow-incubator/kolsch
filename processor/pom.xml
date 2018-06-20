@@ -144,7 +144,7 @@
                                 </labels>
                                 <env>
                                     <ZK_URL>my-cluster-zookeeper:2181</ZK_URL>
-                                    <ZK_PATH>/streams/processor</ZK_PATH>
+                                    <ZK_PATH>/com.demo.streams/processor</ZK_PATH>
                                 </env>
                             </resources>
                         </configuration>

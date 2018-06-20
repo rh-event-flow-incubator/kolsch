@@ -38,7 +38,7 @@ public class SimpleProducer extends AbstractProcessor implements Runnable {
 
         int messageNo = 1;
         while (isRunning()) {
-            String messageStr = "foo bar bat " + messageNo;
+            String messageStr = messageNo + " The quick brown fox jumped over the lazy dog." ;
 
             try {
                 producer.send(new ProducerRecord<>(topic,

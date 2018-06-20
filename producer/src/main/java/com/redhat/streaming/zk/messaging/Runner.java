@@ -15,9 +15,6 @@ public class Runner {
     private static final String zkUrlVar = "ZK_URL"; //"localhost:2181";
     private static final String zkPathVar = "ZK_PATH"; // "/streams/app1";
 
-
-//    private static final String kafkaUrl = "localhost:9092";
-
     public static void main(String... args) {
         logger.info("Starting Demo");
 

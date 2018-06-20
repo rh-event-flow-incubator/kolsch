@@ -19,7 +19,7 @@ A later version will allow other parameters to be specified such as Serdes.
 * Producer - simple producer that will send and receive messages.
 * Consumer - consumes messages and logs them.
 * Processor - Uses KStreams API to split messages into one word per message. 
-* Demo - Versions of the demo. One for Openshift and one standalone that requires Zookeeper and Kafka to be running locally.
+* Manager - JAX-RS Application that will accept JSON files and create the mapping in ZooKeeper.
 
 # Running the Example
 
@@ -37,6 +37,33 @@ This will be changed in future as the security around Zookeeper indicates it wou
 There are two ways to wire up the example: the easy way and the hard way.
 
 ## The Easy Way
+
+The manager application will wire the services together based on a JSON configuration file (examples in manager/src/main/resources). 
+
+```json
+{
+  "applicationId": "com.demo.streams",
+  "rows": {
+    "producer/kafkaUrl": "my-cluster-kafka:9092",
+    "producer/topic": "topic1",
+    "consumer/kafkaUrl": "my-cluster-kafka:9092",
+    "consumer/topic": "topic1"
+  }
+}
+```
+Deploy the manger as a container in Openshift and then the following commands will wire up the services assuming the manager route is `http://manager-myproject.127.0.0.1.nip.io`:
+
+```bash
+> cd manager
+
+#Producer -> Consumer
+> curl -F file=@src/main/resources/demo-prod-con.json http://manager-myproject.127.0.0.1.nip.io/kolsch/manager/upload
+
+#Producer -> Processor -> Consumer
+> curl -F file=@src/main/resources/demo-prod-proc-con.json http://manager-myproject.127.0.0.1.nip.io/kolsch/manager/upload
+
+
+```
 
 The demo project is setup to wire the three microservices Producer -> Processor -> Consumer. 
 Deploy this project into Openshift and the services will reconifugure themselves and start working.
@@ -75,6 +102,7 @@ This technique will not work with Thorntail but it is possible that the classes 
 * Add diagrams
 * Add support for Thorntail and other RHOARs.
 * Inject wrapper into client code. Currently the developer has to manually setup the wrapper. It should be injected.
+* More declarative format for JSON configuruation file
 * The wiring that is done using the Zookeeper shell should be done via Config Maps. 
   An operator component will be developed which will watch for Config Map updates and apply the changes to Zookeeper. 
 
