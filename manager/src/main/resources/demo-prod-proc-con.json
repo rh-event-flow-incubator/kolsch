@@ -1,0 +1,13 @@
+{
+  "applicationId": "com.demo.streams",
+  "rows": {
+    "producer/kafkaUrl": "my-cluster-kafka:9092",
+    "producer/topic": "topic1",
+    "processor/in/kafkaUrl": "my-cluster-kafka:9092",
+    "processor/in/topic": "topic1",
+    "processor/out/kafkaUrl": "my-cluster-kafka:9092",
+    "processor/out/topic": "topic2",
+    "consumer/kafkaUrl": "my-cluster-kafka:9092",
+    "consumer/topic": "topic2"
+  }
+}
